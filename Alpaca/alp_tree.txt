@@ -1,0 +1,47 @@
+number /[0-9]+(\.[0-9]*)?([eE][\+\-]?[0-9]+)?/ { new Token("Number", text) }
+plus /\+/ { new Token("Operator", text) }
+minus /\-/ { new Token("Operator", text) }
+mul /\*/ { new Token("Operator", text) }
+div /\// { new Token("Operator", text) }
+pow /\^/ { new Token("Operator", text) }
+id /[a-z_][a-z_0-9]*/ { new Token("ID", text) }
+lparen /\(/ { new Token("LParen", text) }
+rparen /\)/ { new Token("RParen", text) }
+comma /,/ { new Token("Comma", text) }
+key /:[a-z]/ { text[1] } :: char
+assign /=/
+/ +/
+
+%%
+
+%top {
+using Alpaca;
+}
+S -> key id lparen A rparen assign E { (_1 == 'a') ? FuncParser.DefineFunc(_2.TokenContent, new Func(_7, _4)) : throw new Exception("':a' key should be used to assign.") }
+   | key id assign E                 { (_1 == 'a') ? FuncParser.DefineVar(_2.TokenContent, new Token("Number",TokenNode.ComputeTree(_4).ToString())) : throw new Exception("':a' key should be used to assign.") }
+   | key id                          { (_1 == 'c') ? FuncParser.ComputeFunc(_2.TokenContent) : throw new Exception("':c' key should be used to call a function.") }
+   | E                               { $"Tree: {_1}\nValue: {TokenNode.ComputeTree(_1)}" }
+   ;
+A -> id comma A                      { new List<string>(_3.TokenContent) { _1 } }
+   | id                              { new List<string>() { _1.TokenContent } }
+   ;
+
+E -> E plus T                        { new TokenNode(_2, _1, _3) }
+   | E minus T                       { new TokenNode(_2, _1, _3) }
+   | T { _1 }
+   ;
+
+T -> T mul F                         { new TokenNode(_2, _1, _3) }
+   | T div F                         { new TokenNode(_2, _1, _3) }
+   | F { _1 }
+   ;
+   
+F -> V pow F                         { new TokenNode(_2, _1, _3) }
+   | V { _1 }
+   ;
+   
+V -> minus V                         { new TokenNode(_1, null, _2) }
+   | lparen E rparen                 { _2 }
+   | number                          { new TokenNode(_1) }
+   | id                              { new TokenNode(_1) }
+   ;

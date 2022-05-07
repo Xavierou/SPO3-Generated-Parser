@@ -10,7 +10,7 @@ namespace Alpaca
     {
         //Словари, связывающие название функции/переменной и их значения.
         public static Dictionary<string, Func> functions = new Dictionary<string, Func>();
-        public static Dictionary<string, Token> variables = new Dictionary<string, Token>();
+        public static Dictionary<string, Variable> variables = new Dictionary<string, Variable>();
 
         /// <summary>
         /// Функция, возвращающая класс функции из словаря функций.
@@ -34,15 +34,15 @@ namespace Alpaca
         /// <param name="id">Имя переменной</param>
         /// <param name="num">Значение (токен) переменной</param>
         /// <returns>Сообщение об успехе.</returns>
-        public static string DefineVar(string id, Token num)
+        public static string DefineVar(string id, Variable num)
         {
             if (!variables.TryAdd(id, num))
             {
                 variables.Remove(id);
                 variables.Add(id, num);
-                return $"Re-defined variable {id} to {num.TokenContent}.";
+                return $"Re-defined variable {id} to {num.Value.TokenContent}.";
             }
-            return $"Successfully defined variable: {id} = {num.TokenContent}";
+            return $"Successfully defined variable: {id} = {num.Value.TokenContent}";
         }
 
         /// <summary>
@@ -66,21 +66,19 @@ namespace Alpaca
         /// Функция, определяющая, можно ли посчитать сейчас функцию или нет.
         /// </summary>
         /// <param name="funcName">Имя функции</param>
+        /// <param name="args">Список подставляемых аргументов</param>
         /// <returns>true, если функцию можно посчитать.</returns>
-        private static bool CanBeComputed(string funcName)
+        private static bool CanBeComputed(string funcName, List<Token> args)
         {
             bool output = true;
             Func func = GetFunc(funcName);
-
-            string[] funcVars = func.Args;
-            foreach (string variable in funcVars)
+            foreach (Token arg in args)
             {
-                if (!variables.ContainsKey(variable))
+                if (!variables.ContainsKey(arg.TokenContent))
                 {
                     output = false;
                 }
             }
-
             return output;
         }
 
@@ -88,24 +86,44 @@ namespace Alpaca
         /// Функция, добавляющая в узел с переменной значение переменной.
         /// </summary>
         /// <param name="tree">Тело функции</param>
-        /// <param name="variable">Имя переменной, значение которой надо добавить</param>
-        private static void ReplaceWithValue(TokenNode tree, string variable)
+        /// <param name="variable">Перменная в теле функции</param>
+        /// <param name="argument">Подставляемый аргумент</param>
+        /// <excepton cref="Exception">В случае, если преобразование типов нельзя совершить</excepton>
+        private static void ReplaceWithValue(TokenNode tree, Token variable, Token argument)
         {
-            Token varToken;
-            variables.TryGetValue(variable, out varToken);
-            if (tree.Value.TokenContent.Equals(variable))
+            Variable argToken;
+            variables.TryGetValue(argument.TokenContent, out argToken);
+
+            if (tree.Value.TokenContent.Equals(variable.TokenContent))
             {
-                tree.VarValue = varToken;
+                string varType = variable.TokenType;
+                string argType = argToken.Type;
+                if (!varType.Equals(argType))
+                {
+                    if (varType == "double" && argType == "int")
+                    {
+                        tree.VarValue = argToken.Value;
+                        tree.VarValue.TokenContent += ".0";
+                    }
+                    else
+                    {
+                        throw new Exception($"Cannot convert type '{argument.TokenType}' of {argument.TokenContent} to the required type 'int' of {variable.TokenContent}");
+                    }
+                }
+                else
+                {
+                    tree.VarValue = argToken.Value;
+                }
             }
 
             if (tree.Left != null)
             {
-                ReplaceWithValue(tree.Left, variable);
+                ReplaceWithValue(tree.Left, variable, argument);
             }
 
             if (tree.Right != null)
             {
-                ReplaceWithValue(tree.Right, variable);
+                ReplaceWithValue(tree.Right, variable, argument);
             }
         }
 
@@ -113,20 +131,27 @@ namespace Alpaca
         /// Функция, отвечающая за вычисление значения функции.
         /// </summary>
         /// <param name="func">Имя вычисляемой функции</param>
+        /// <param name="funcArgs">Список подставляемых аргументов</param>
         /// <returns>Результат выполнения функции</returns>
-        /// <exception cref="Exception">В случае если не все переменные были объявленыы</exception>
-        public static string ComputeFunc(string func)
+        /// <exception cref="Exception">В случае если не все переменные были объявлены или же было передано
+        /// достаточное количество аргументов</exception>
+        public static string ComputeFunc(string func, List<Token> funcArgs)
         {
-            if (!CanBeComputed(func))
+            if (!CanBeComputed(func, funcArgs))
             {
                 throw new Exception($"Function {func} cannot be computed because not all variables have been defined.");
             }
 
             Func function = GetFunc(func);
-            string[] funcVars = function.Args;
-            foreach (string var in funcVars)
+            Token[] funcVars = function.Args;
+            if (funcArgs.Count != funcVars.Length)
             {
-                ReplaceWithValue(function.Body, var);
+                throw new Exception($"Function {func} takes {funcVars.Length} elements, while {funcArgs.Count} elements were given.");
+            }
+            
+            for (int i = 0; i < funcVars.Length; i++)
+            {
+                ReplaceWithValue(function.Body, funcVars[i], funcArgs[i]);
             }
 
             double output = TokenNode.ComputeTree(function.Body);

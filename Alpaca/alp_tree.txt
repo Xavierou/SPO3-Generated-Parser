@@ -9,6 +9,8 @@ lparen /\(/ { new Token("LParen", text) }
 rparen /\)/ { new Token("RParen", text) }
 comma /,/ { new Token("Comma", text) }
 key /:[a-z]/ { text[1] } :: char
+typeint /:int/ { text.Remove(0, 1) }
+typedouble /:double/ { text.Remove(0, 1) }
 assign /=/
 / +/
 
@@ -18,14 +20,21 @@ assign /=/
 using Alpaca;
 }
 S -> key id lparen A rparen assign E { (_1 == 'a') ? FuncParser.DefineFunc(_2.TokenContent, new Func(_7, _4)) : throw new Exception("':a' key should be used to assign.") }
-   | key id assign E                 { (_1 == 'a') ? FuncParser.DefineVar(_2.TokenContent, new Token("Number",TokenNode.ComputeTree(_4).ToString())) : throw new Exception("':a' key should be used to assign.") }
-   | key id                          { (_1 == 'c') ? FuncParser.ComputeFunc(_2.TokenContent) : throw new Exception("':c' key should be used to call a function.") }
+   | key id typeint assign E         { (_1 == 'a') ? FuncParser.DefineVar(_2.TokenContent, new Variable(_3, new Token("Number",TokenNode.ComputeTree(_5).ToString()))) : throw new Exception("':a' key should be used to assign.") }
+   | key id typedouble assign E      { (_1 == 'a') ? FuncParser.DefineVar(_2.TokenContent, new Variable(_3, new Token("Number",TokenNode.ComputeTree(_5).ToString()))) : throw new Exception("':a' key should be used to assign.") }
+   | key id assign E                 { (_1 == 'a') ? FuncParser.DefineVar(_2.TokenContent, new Variable(new Token("Number",TokenNode.ComputeTree(_4).ToString()))) : throw new Exception("':a' key should be used to assign.") }
+   | key id lparen A rparen          { (_1 == 'c') ? FuncParser.ComputeFunc(_2.TokenContent, _4) : throw new Exception("':c' key should be used to call a function.") }
    | E                               { $"Tree: {_1}\nValue: {TokenNode.ComputeTree(_1)}" }
    ;
-A -> id comma A                      { new List<string>(_3.TokenContent) { _1 } }
-   | id                              { new List<string>() { _1.TokenContent } }
+A -> 
+   | id typeint comma A              { new List<Token>(_4) { new Token(_2, _1.TokenContent) } }
+   | id typedouble comma A           { new List<Token>(_4) { new Token(_2, _1.TokenContent) } }
+   | id comma A                      { new List<Token>(_3) { new Token("double", _1.TokenContent) } }
+   | id typeint                      { new List<Token>() { new Token(_2, _1.TokenContent) } }
+   | id typedouble                   { new List<Token>() { new Token(_2, _1.TokenContent) } }
+   | id                              { new List<Token>() { new Token("double", _1.TokenContent) } }
    ;
-
+   
 E -> E plus T                        { new TokenNode(_2, _1, _3) }
    | E minus T                       { new TokenNode(_2, _1, _3) }
    | T { _1 }
@@ -40,7 +49,7 @@ F -> V pow F                         { new TokenNode(_2, _1, _3) }
    | V { _1 }
    ;
    
-V -> minus V                         { new TokenNode(_1, null, _2) }
+V -> minus V                         { new TokenNode(_1, new TokenNode(new Token("Number", "0")), _2) }
    | lparen E rparen                 { _2 }
    | number                          { new TokenNode(_1) }
    | id                              { new TokenNode(_1) }

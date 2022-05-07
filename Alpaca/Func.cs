@@ -9,8 +9,8 @@ namespace Alpaca
     public class Func
     {
         public TokenNode Body { get; private set; }
-        public string[] Args { get; private set; }
-        public Func(TokenNode body, List<string>args)
+        public Token[] Args { get; private set; }
+        public Func(TokenNode body, List<Token>args)
         {
             Body = body;
             Args = args.ToArray();

@@ -24,6 +24,7 @@ namespace Alpaca
         public string TokenContent
         {
             get { return tokenContent; }
+            set { tokenContent = value; }
         }
 
         public override string ToString()

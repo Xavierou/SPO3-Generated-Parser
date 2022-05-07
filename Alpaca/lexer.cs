@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Alpaca;
 namespace lexer {
 public enum TokenType : uint {
-  eof, Tok_lparen,Tok_rparen,Tok_mul,Tok_plus,Tok_comma,Tok_minus,Tok_div,Tok_assign,Tok_pow,Tok_id,Tok_number,Tok_key
+  eof, Tok_lparen,Tok_rparen,Tok_mul,Tok_plus,Tok_comma,Tok_minus,Tok_div,Tok_assign,Tok_pow,Tok_id,Tok_number,Tok_key,Tok_typeint,Tok_typedouble
 }
 
 class Buf<T> : IEnumerator<T> {
@@ -160,7 +160,9 @@ public class Lexer {
       if(!inputBuf.MoveNext()) goto end;
       curCh = inputBuf.Current;
       tmp += curCh;
-      if((curCh >= 'a' && curCh <= 'z')) goto state_18;
+      if(curCh == 'd') goto state_18;
+ else if(curCh == 'i') goto state_19;
+ else if((curCh >= 'a' && curCh <= 'z')) goto state_20;
       goto end;
     state_10:
       buf += tmp;
@@ -248,6 +250,81 @@ public class Lexer {
       if(!inputBuf.MoveNext()) goto end;
       curCh = inputBuf.Current;
       tmp += curCh;
+      if(curCh == 'o') goto state_23;
+      goto end;
+    state_19:
+      buf += tmp;
+      tmp = "";
+      accSt = 19;
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
+      if(curCh == 'n') goto state_21;
+      goto end;
+    state_20:
+      buf += tmp;
+      tmp = "";
+      accSt = 20;
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
+      
+      goto end;
+    state_21:
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
+      if(curCh == 't') goto state_22;
+      goto end;
+    state_22:
+      buf += tmp;
+      tmp = "";
+      accSt = 22;
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
+      
+      goto end;
+    state_23:
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
+      if(curCh == 'u') goto state_24;
+      goto end;
+    state_24:
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
+      if(curCh == 'b') goto state_25;
+      goto end;
+    state_25:
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
+      if(curCh == 'l') goto state_26;
+      goto end;
+    state_26:
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
+      if(curCh == 'e') goto state_27;
+      goto end;
+    state_27:
+      buf += tmp;
+      tmp = "";
+      accSt = 27;
+      
+      if(!inputBuf.MoveNext()) goto end;
+      curCh = inputBuf.Current;
+      tmp += curCh;
       
       goto end;
     end:
@@ -314,6 +391,22 @@ public class Lexer {
       case 18:
         if (debug) Console.Error.WriteLine($"Lexed token key: \"{text}\"");
         yield return (TokenType.Tok_key,  text[1] );
+        goto start;
+      case 19:
+        if (debug) Console.Error.WriteLine($"Lexed token key: \"{text}\"");
+        yield return (TokenType.Tok_key,  text[1] );
+        goto start;
+      case 20:
+        if (debug) Console.Error.WriteLine($"Lexed token key: \"{text}\"");
+        yield return (TokenType.Tok_key,  text[1] );
+        goto start;
+      case 22:
+        if (debug) Console.Error.WriteLine($"Lexed token typeint: \"{text}\"");
+        yield return (TokenType.Tok_typeint,  text.Remove(0, 1) );
+        goto start;
+      case 27:
+        if (debug) Console.Error.WriteLine($"Lexed token typedouble: \"{text}\"");
+        yield return (TokenType.Tok_typedouble,  text.Remove(0, 1) );
         goto start;
     }
     if (inputBuf.Empty) {

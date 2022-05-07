@@ -15,7 +15,7 @@ do
     }
     catch (Exception exc)
     {
-        Console.WriteLine(exc.Message);
+        Console.WriteLine(exc.Message + "\n=> ");
         input = Console.ReadLine();
     }
 } while (!input.Equals("stop"));
